@@ -24,10 +24,11 @@ public class EsSearch {
         System.out.println("Here");
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, -1);
-        Long Start = cal.getTimeInMillis();
-        QueryBuilder qb = QueryBuilders.rangeQuery("lastActivity").gt(start));;
+        Long start = cal.getTimeInMillis();
+        QueryBuilder qb = QueryBuilders.rangeQuery("__start_ts").gt(start);
         SearchResponse scrollResp = client.prepareSearch()
                 .setScroll(new TimeValue(60000))
+		.setQuery(qb)
                 //.addAggregation(AggregationBuilders.terms("key1"))
                 .execute().actionGet();
         long totalHits = scrollResp.getHits().getTotalHits();
@@ -36,9 +37,9 @@ public class EsSearch {
         while (scrollResp.getHits().getHits().length > 0) {
             BulkRequestBuilder builder = client.prepareBulk();
             for (SearchHit hit : scrollResp.getHits().getHits()) {
-                String modelKey = (String) hit.getSource().get("modelKey");
                 String id = hit.getId();
-                System.out.println(i + "/" + totalHits + " " + id + " " + modelKey);
+//                System.out.println(hit.sourceAsString());
+		System.out.println(i + "/" + totalHits + " " + id);
                 i++;
             }
 //            if (delete) {
