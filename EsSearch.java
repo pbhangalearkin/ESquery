@@ -21,16 +21,16 @@ public class EsSearch {
         TransportClient client = TransportClient.builder().settings(settings).build().addTransportAddress(inetAddress);
 
         String index = args[0];
-        String type = args[1];
-        Integer batchSize = Integer.parseInt(args[2]);
-        boolean delete = "delete".equals(args[3]);
-
+        Integer batchSize = Integer.parseInt(args[1]);
+        boolean delete = "delete".equals(args[2]);
+        System.out.println("Here");
         QueryBuilder qb = QueryBuilders.termQuery("__cid", 10000);
         SearchResponse scrollResp = client.prepareSearch(index)
                 .setScroll(new TimeValue(60000))
                 .addAggregation(AggregationBuilders.terms("key1"))
                 .setSize(batchSize).execute().actionGet();
         long totalHits = scrollResp.getHits().getTotalHits();
+        System.out.println("Total Hits : ",totalHits);
         int i = 1;
         while (scrollResp.getHits().getHits().length > 0) {
             BulkRequestBuilder builder = client.prepareBulk();
@@ -38,22 +38,21 @@ public class EsSearch {
                 String modelKey = (String) hit.getSource().get("modelKey");
                 String id = hit.getId();
                 System.out.println(i + "/" + totalHits + " " + id + " " + modelKey);
-                builder.add(client.prepareDelete(index, type, id).setRouting(modelKey).setId(id));
                 i++;
             }
-            if (delete) {
-                builder.setRefresh(true);
-                BulkResponse response = builder.execute().get();
-                BulkItemResponse[] items = response.getItems();
-                for (BulkItemResponse item : items) {
-                    if (item.isFailed()) {
-                        System.out.println(item.getId() + " failed");
-                        System.out.println(item.getFailureMessage());
-                    } else {
-                        System.out.println(item.getId() + " success");
-                    }
-                }
-            }
+//            if (delete) {
+//                builder.setRefresh(true);
+//                BulkResponse response = builder.execute().get();
+//                BulkItemResponse[] items = response.getItems();
+//                for (BulkItemResponse item : items) {
+//                    if (item.isFailed()) {
+//                        System.out.println(item.getId() + " failed");
+//                        System.out.println(item.getFailureMessage());
+//                    } else {
+//                        System.out.println(item.getId() + " success");
+//                    }
+//                }
+//            }
             scrollResp = client.prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
         }
     }
