@@ -33,12 +33,16 @@ public class EsSearch {
                 .execute().actionGet();
         long totalHits = scrollResp.getHits().getTotalHits();
         System.out.println("Total Hits : "+totalHits);
-        int i = 1;
-        while (scrollResp.getHits().getHits().length > 0) {
+        int i = 0;
+        int totalDocumentSize = 0;
+	while (scrollResp.getHits().getHits().length > 0) {
             BulkRequestBuilder builder = client.prepareBulk();
             for (SearchHit hit : scrollResp.getHits().getHits()) {
                 String id = hit.getId();
-//                System.out.println(hit.sourceAsString());
+		int x = hit.sourceRef().length();
+		totalDocumentSize += x;
+		System.out.println(x + " Bytes"); 
+//		System.out.println(hit.sourceAsString());
 		System.out.println(i + "/" + totalHits + " " + id);
                 i++;
             }
@@ -57,5 +61,6 @@ public class EsSearch {
 //            }
             scrollResp = client.prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
         }
+	System.out.println("Average Document Size : " + ( i > 0 ? totalDocumentSize/i : "NULL")); 
     }
 }
