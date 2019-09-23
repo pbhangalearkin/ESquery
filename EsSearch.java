@@ -21,16 +21,14 @@ public class EsSearch {
         TransportClient client = TransportClient.builder().settings(settings).build().addTransportAddress(inetAddress);
 
         String index = args[0];
-        Integer batchSize = Integer.parseInt(args[1]);
-        boolean delete = "delete".equals(args[2]);
         System.out.println("Here");
         QueryBuilder qb = QueryBuilders.termQuery("__cid", 10000);
         SearchResponse scrollResp = client.prepareSearch(index)
                 .setScroll(new TimeValue(60000))
-                .addAggregation(AggregationBuilders.terms("key1"))
-                .setSize(batchSize).execute().actionGet();
+                //.addAggregation(AggregationBuilders.terms("key1"))
+                .execute().actionGet();
         long totalHits = scrollResp.getHits().getTotalHits();
-        System.out.println("Total Hits : ",totalHits);
+        System.out.println("Total Hits : "+totalHits);
         int i = 1;
         while (scrollResp.getHits().getHits().length > 0) {
             BulkRequestBuilder builder = client.prepareBulk();
