@@ -11,6 +11,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import java.util.Calendar;
 
 import java.net.InetAddress;
 
@@ -20,10 +21,12 @@ public class EsSearch {
         InetSocketTransportAddress inetAddress = new InetSocketTransportAddress(InetAddress.getByName("localhost"), 9300);
         TransportClient client = TransportClient.builder().settings(settings).build().addTransportAddress(inetAddress);
 
-        String index = args[0];
         System.out.println("Here");
-        QueryBuilder qb = QueryBuilders.termQuery("__cid", 10000);
-        SearchResponse scrollResp = client.prepareSearch(index)
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -1);
+        Long Start = cal.getTimeInMillis();
+        QueryBuilder qb = QueryBuilders.rangeQuery("lastActivity").gt(start));;
+        SearchResponse scrollResp = client.prepareSearch()
                 .setScroll(new TimeValue(60000))
                 //.addAggregation(AggregationBuilders.terms("key1"))
                 .execute().actionGet();
