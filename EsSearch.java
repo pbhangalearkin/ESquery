@@ -33,7 +33,7 @@ public class EsSearch {
         TransportClient client = TransportClient.builder().settings(settings).build().addTransportAddress(inetAddress);
 
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -2);
+        cal.add(Calendar.DATE, -1);
         Long start = cal.getTimeInMillis();
         QueryBuilder qb = QueryBuilders.rangeQuery("__start_ts").gt(start);
         SearchResponse scrollResp = client.prepareSearch()
