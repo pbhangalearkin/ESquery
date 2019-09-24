@@ -42,19 +42,19 @@ public class EsSearch {
                 //.addAggregation(AggregationBuilders.terms("key1"))
                 .execute().actionGet();
         long totalHits = scrollResp.getHits().getTotalHits();
-        int i = 0;
-        int totalDocumentSize = 0;
+        long i = 0L;
+        long totalDocumentSize = 0L;
         Multimap<String, String> objectTypeToObjectIdMap = ArrayListMultimap.create();
         class DocumentInfo {
-            int documentCount;
-            int totalDocumentSize;
+            long documentCount;
+            long totalDocumentSize;
         }
         Map<String, DocumentInfo> perObjectTypeDocumentSize = new HashMap<String, DocumentInfo>();
         while (scrollResp.getHits().getHits().length > 0) {
             for (SearchHit hit : scrollResp.getHits().getHits()) {
                 String id = hit.getId();
                 String[] parsedId = id.split(":", -1);
-                int x = hit.sourceRef().length();
+                long x = hit.sourceRef().length();
 
                 if (!objectTypeToObjectIdMap.containsEntry(parsedId[1], parsedId[2]))
                     objectTypeToObjectIdMap.put(parsedId[1], parsedId[2]);
@@ -88,7 +88,7 @@ public class EsSearch {
         for (String key : objectTypeToObjectIdMap.keySet()) {
             String numOfObjects = Integer.toString(objectTypeToObjectIdMap.get(key).size());
             DocumentInfo documentInfo = perObjectTypeDocumentSize.get(key);
-            String averageDocSize = Integer.toString(documentInfo.totalDocumentSize / documentInfo.documentCount);
+            String averageDocSize = Long.toString(documentInfo.totalDocumentSize / documentInfo.documentCount);
             String entry = key + delimiter + numOfObjects + delimiter + averageDocSize + "\n";
             csvWriter.append(entry);
         }
