@@ -21,9 +21,8 @@ public class EsSearch {
         InetSocketTransportAddress inetAddress = new InetSocketTransportAddress(InetAddress.getByName("localhost"), 9300);
         TransportClient client = TransportClient.builder().settings(settings).build().addTransportAddress(inetAddress);
 
-        System.out.println("Here");
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -1);
+        cal.add(Calendar.DATE, -2);
         Long start = cal.getTimeInMillis();
         QueryBuilder qb = QueryBuilders.rangeQuery("__start_ts").gt(start);
         SearchResponse scrollResp = client.prepareSearch()
