@@ -11,9 +11,20 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+
 import java.util.Calendar;
 
+import java.io.FileWriter;
+import java.io.File;
 import java.net.InetAddress;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 public class EsSearch {
     public static void main(String[] args) throws Exception {
@@ -27,39 +38,61 @@ public class EsSearch {
         QueryBuilder qb = QueryBuilders.rangeQuery("__start_ts").gt(start);
         SearchResponse scrollResp = client.prepareSearch()
                 .setScroll(new TimeValue(60000))
-		.setQuery(qb)
+                .setQuery(qb)
                 //.addAggregation(AggregationBuilders.terms("key1"))
                 .execute().actionGet();
         long totalHits = scrollResp.getHits().getTotalHits();
-        System.out.println("Total Hits : "+totalHits);
         int i = 0;
         int totalDocumentSize = 0;
-	while (scrollResp.getHits().getHits().length > 0) {
-            BulkRequestBuilder builder = client.prepareBulk();
+        Multimap<String, String> objectTypeToObjectIdMap = ArrayListMultimap.create();
+        class DocumentInfo {
+            int documentCount;
+            int totalDocumentSize;
+        }
+        Map<String, DocumentInfo> perObjectTypeDocumentSize = new HashMap<String, DocumentInfo>();
+        while (scrollResp.getHits().getHits().length > 0) {
             for (SearchHit hit : scrollResp.getHits().getHits()) {
                 String id = hit.getId();
-		int x = hit.sourceRef().length();
-		totalDocumentSize += x;
-		System.out.println(x + " Bytes"); 
-//		System.out.println(hit.sourceAsString());
-		System.out.println(i + "/" + totalHits + " " + id);
+                String[] parsedId = id.split(":", -1);
+                int x = hit.sourceRef().length();
+
+                if (!objectTypeToObjectIdMap.containsEntry(parsedId[1], parsedId[2]))
+                    objectTypeToObjectIdMap.put(parsedId[1], parsedId[2]);
+                if (!perObjectTypeDocumentSize.containsKey(parsedId[1])) {
+                    DocumentInfo documentInfo = new DocumentInfo();
+                    documentInfo.documentCount = 1;
+                    documentInfo.totalDocumentSize = x;
+                    perObjectTypeDocumentSize.put(parsedId[1], documentInfo);
+                } else {
+                    DocumentInfo documentInfo = perObjectTypeDocumentSize.get(parsedId[1]);
+                    documentInfo.documentCount++;
+                    documentInfo.totalDocumentSize += x;
+                    perObjectTypeDocumentSize.put(parsedId[1], documentInfo);
+                }
+                totalDocumentSize += x;
+                //System.out.println(x + " Bytes");
+                //System.out.println(i + "/" + totalHits + ", Object Type : " + parsedId[1] + ", Object Id : " + parsedId[2]);
                 i++;
             }
-//            if (delete) {
-//                builder.setRefresh(true);
-//                BulkResponse response = builder.execute().get();
-//                BulkItemResponse[] items = response.getItems();
-//                for (BulkItemResponse item : items) {
-//                    if (item.isFailed()) {
-//                        System.out.println(item.getId() + " failed");
-//                        System.out.println(item.getFailureMessage());
-//                    } else {
-//                        System.out.println(item.getId() + " success");
-//                    }
-//                }
-//            }
             scrollResp = client.prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
         }
-	System.out.println("Average Document Size : " + ( i > 0 ? totalDocumentSize/i : "NULL")); 
+//	System.out.println(objectTypeToObjectIdMap.values());
+        System.out.println("Total Hits : " + totalHits);
+        System.out.println("Average Document Size : " + (i > 0 ? totalDocumentSize / i : "NULL"));
+
+        File file = new File("./output.csv");
+        FileWriter csvWriter = new FileWriter(file);
+        String delimiter = ",";
+        String header = "ObjectType" + delimiter + "Number of Objects" + delimiter + "Average Document Size" + "\n";
+        csvWriter.append(header);
+        for (String key : objectTypeToObjectIdMap.keySet()) {
+            String numOfObjects = Integer.toString(objectTypeToObjectIdMap.get(key).size());
+            DocumentInfo documentInfo = perObjectTypeDocumentSize.get(key);
+            String averageDocSize = Integer.toString(documentInfo.totalDocumentSize / documentInfo.documentCount);
+            String entry = key + delimiter + numOfObjects + delimiter + averageDocSize + "\n";
+            csvWriter.append(entry);
+        }
+        csvWriter.flush();
+        csvWriter.close();
     }
 }
